@@ -2,7 +2,6 @@ import $ from "jquery";
 import Rx from "rxjs/Rx";
 
 // interact with html elements
-
 const btn = $("#btn");
 const input = $("#input");
 const output = $("#output");
@@ -20,6 +19,8 @@ btnStream$.subscribe(
     }
 );
 
+// ----
+
 const inputStream$ = Rx.Observable.fromEvent(input, "keyup");
 inputStream$.subscribe(
     (e) => {
@@ -33,6 +34,8 @@ inputStream$.subscribe(
         console.log("Completed");
     }
 );
+
+// ----
 
 const moveStream$ = Rx.Observable.fromEvent(document, "mousemove");
 moveStream$.subscribe(
@@ -61,6 +64,8 @@ numbers$.subscribe(
         console.log("Completed");
     }
 );
+
+// ----
 
 const posts = [
     { tittle: "Post 1", body: "Body 1" },
@@ -166,7 +171,7 @@ sourceTimer$.subscribe(
     }
 );
 
-const sourceRange$ = Rx.Observable.timer(100, 110);
+const sourceRange$ = Rx.Observable.range(50, 55);
 sourceRange$.subscribe(
     (x) => {
         console.log(x);
@@ -178,3 +183,106 @@ sourceRange$.subscribe(
         console.log("Completed");
     }
 );
+
+// map and pluck
+const sourceInterval2$ = Rx.Observable.interval(1000)
+    .take(10)
+    .map((v) => v * v);
+sourceInterval2$.subscribe((v) => console.log(v));
+
+const sourceFrom2$ = Rx.Observable.from(["John", "Tom", "Shawn"])
+    .map((v) => v.toUpperCase())
+    .map((v) => "I am " + v);
+sourceFrom2$.subscribe((v) => console.log(v));
+
+const getGitHubUser = (username) => {
+    return $.ajax({
+        url: "https://api.github.com/users/" + username,
+        dataType: "jsonp",
+    }).promise();
+};
+
+Rx.Observable.fromPromise(getGitHubUser("bradtraversy"))
+    .map((user) => user.data)
+    .subscribe((x) => {
+        console.log(x);
+    });
+
+// ----
+
+const users = [
+    { name: "Will", age: 34 },
+    { name: "Mike", age: 33 },
+    { name: "Paul", age: 35 },
+];
+
+const users$ = Rx.Observable.from(users).pluck("name");
+users$.subscribe((x) => console.log(x));
+
+// merge and concat
+Rx.Observable.of("Hello")
+    .merge(Rx.Observable.of("Everyone"))
+    .subscribe((x) => console.log(x));
+
+Rx.Observable.interval(2000)
+    .merge(Rx.Observable.interval(500))
+    .take(5)
+    .subscribe((x) => console.log(x));
+
+const source1$ = Rx.Observable.interval(4000).map((v) =>
+    console.log("Merge1: " + v)
+);
+const source2$ = Rx.Observable.interval(3000).map((v) =>
+    console.log("Merge2: " + v)
+);
+Rx.Observable.merge(source1$, source2$)
+    .take(5)
+    .subscribe((x) => console.log(x));
+
+// ----
+
+const source1Concat$ = Rx.Observable.range(0, 5).map((v) =>
+    console.log("Concat1: " + v)
+);
+const source2Concat$ = Rx.Observable.range(6, 5).map((v) =>
+    console.log("Concat2: " + v)
+);
+Rx.Observable.concat(source1Concat$, source2Concat$).subscribe((x) =>
+    console.log(x)
+);
+
+// merge map swich map
+Rx.Observable.of("Hello").subscribe((v) => {
+    // wrong way
+    Rx.Observable.of(v + " Everyone wrong way").subscribe((x) =>
+        console.log(x)
+    );
+});
+
+Rx.Observable.of("Hello")
+    .mergeMap((v) => {
+        return Rx.Observable.of(v + " Everyone");
+    })
+    .subscribe((x) => console.log(x));
+
+// ---
+
+const getGitHubUser2 = (username) => {
+    return $.ajax({
+        url: "https://api.github.com/users/" + username,
+        dataType: "jsonp",
+    }).promise();
+};
+
+const input2 = $("#input2");
+const inputStream2$ = Rx.Observable.fromEvent(input2, "keyup")
+    .map((e) => e.target.value)
+    .switchMap((v) => {
+        return Rx.Observable.fromPromise(getGitHubUser2(v));
+    });
+
+inputStream2$.subscribe((x) => {
+    $("#name").text(x.data.name);
+    $("#blog").text(x.data.blog);
+    $("#repos").text("Public repos: " + x.data.public_repos);
+});
